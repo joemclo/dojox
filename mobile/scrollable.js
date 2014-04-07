@@ -163,7 +163,7 @@ define([
 
 			this._ch = []; // connect handlers
 			this._ch.push(connect.connect(this.touchNode, touch.press, this, "onTouchStart"));
-			if(has("css3-animations")){
+			if(has("css3-animations") && this.scrollType !== 4){
 				// flag for whether to use -webkit-transform:translate3d(x,y,z) or top/left style.
 				// top/left style works fine as a workaround for input fields auto-scrolling issue,
 				// so use top/left in case of Android by default.
@@ -198,25 +198,40 @@ define([
 				}
 			}
 
+            if(this.scrollType === 4){
+
+                //TODO will need to add in the connections here for OnFlickAnimationEnd
+                // ie when after touchEnd event fires, the scroll event does not fire for set period of time, signifies scroll has ended.
+                //TODO will need to add in the connections here for OnFlickAnimationStart
+                // ie when touchEnd event fires and first subsequent on scroll event - CHECK THEY CONTINUE FIRING ON inertial scroll
+
+
+            }
+
 			this._speed = {x:0, y:0};
 			this._appFooterHeight = 0;
 			if(this.isTopLevel() && !this.noResize){
 				this.resize();
 			}
 			var _this = this;
-			setTimeout(function(){ 
-				// Why not using widget.defer() instead of setTimeout()? Because this module
-				// is not always mixed into a widget (ex. dojox/mobile/_ComboBoxMenu), and adding 
-				// a check to call either defer or setTimeout has been considered overkill.
-				_this.flashScrollBar();
-			}, 600);
+            // JoeMclo - no flash scroll bar in native scrolling, let the browser do it.
+            if(this.scrollType !== 4){
+                setTimeout(function(){
+                    // Why not using widget.defer() instead of setTimeout()? Because this module
+                    // is not always mixed into a widget (ex. dojox/mobile/_ComboBoxMenu), and adding
+                    // a check to call either defer or setTimeout has been considered overkill.
+                    _this.flashScrollBar();
+                }, 600);
+            }
+
 			
 			// #16363: while navigating among input field using TAB (desktop keyboard) or 
 			// NEXT (mobile soft keyboard), domNode.scrollTop gets modified (this holds even 
 			// if the text widget has selectOnFocus at false, that is even if dijit's _FormWidgetMixin._onFocus 
 			// does not trigger a global scrollIntoView). This messes up ScrollableView's own 
 			// scrolling machinery. To avoid this misbehavior:
-			if(win.global.addEventListener){ // all supported browsers but IE8
+            // JoeMclo - Not required in native scrolling
+			if(win.global.addEventListener && this.scrollType !== 4){ // all supported browsers but IE8
 				// (for IE8, using attachEvent is not a solution, because it only works in bubbling phase)
 				this._onScroll = function(e){
 					if(!_this.domNode || _this.domNode.style.display === 'none'){ return; }
@@ -234,7 +249,8 @@ define([
 				win.global.addEventListener("scroll", this._onScroll, true);
 			}
 			// #17062: Ensure auto-scroll when navigating focusable fields
-			if(!this.disableTouchScroll && this.domNode.addEventListener){
+            // JoeMclo - it just works in native scrolling, hence remove
+			if(!this.disableTouchScroll && this.domNode.addEventListener  && this.scrollType !== 4){
 				this._onFocusScroll = function(e){
 					if(!_this.domNode || _this.domNode.style.display === 'none'){ return; }
 					var node = win.doc.activeElement;
@@ -382,6 +398,45 @@ define([
 				this.domNode.style.height = h;
 			}
 
+            // JoeMclo - for native scrolling, the height of the inner container div, that which actually scrolls, must be set
+            // here we take the height of the parent scrollable calculated above, work out the size of it's children (ie headers/ footers)
+            // and set the scroll height
+
+            if(this.scrollType === 4){
+
+                if (this._v) {
+
+                    var scrollChildren = this.domNode.children;
+                    var childrenHeight = 0;
+
+                    for (var aa in scrollChildren) {
+
+                        if (scrollChildren.hasOwnProperty(aa)) {
+
+                            // don't count yourself  - quicker than using a filter?
+                            if (scrollChildren[aa].classList && !scrollChildren[aa].classList.contains("mblScrollableViewContainer")) {
+
+                                childrenHeight += scrollChildren[aa].getBoundingClientRect && scrollChildren[aa].getBoundingClientRect().height;
+
+
+                            }
+                        }
+
+
+                    }
+
+
+                    this.containerNode.style.height = (dh - childrenHeight) + 'px';
+
+                }
+                if (this._h) {
+
+
+                    //TODO add in the same for the width of a scrollable, if we are doing horizontal scrolling
+                }
+            }
+
+
 			if(!this._conn){
 				// to ensure that the view is within a scrolling area when resized.
 				this.onTouchEnd();
@@ -395,6 +450,9 @@ define([
 		},
 
 		onFlickAnimationEnd: function(e){
+
+            //TODO handle for native scrolling.
+
 			if(has("ios")){
 				this._keepInputCaretInActiveElement();
 			}
@@ -451,6 +509,9 @@ define([
 		},
 
 		onTouchStart: function(e){
+
+            //TODO restrict functionality for native scrolling
+
 			// summary:
 			//		User-defined function to handle touchStart events.
 			if(this.disableTouchScroll){ return; }
@@ -493,6 +554,9 @@ define([
 		},
 
 		onTouchMove: function(e){
+
+            //TODO restrict functionality for native scrolling
+
 			// summary:
 			//		User-defined function to handle touchMove events.
 			if(this._locked){ return; }
@@ -622,6 +686,10 @@ define([
 		},
 
 		onTouchEnd: function(/*Event*/e){
+
+            //TODO restrict functionality for native scrolling
+
+
 			// summary:
 			//		User-defined function to handle touchEnd events.
 			if(this._locked){ return; }
@@ -778,6 +846,9 @@ define([
 		},
 
 		stopAnimation: function(){
+
+            //TODO restrict functionality for native scrolling
+
 			// summary:
 			//		Stops the currently running animation.
 			domClass.remove(this.containerNode, "mblScrollableScrollTo2");
@@ -810,6 +881,9 @@ define([
 			//		function causes the given node to scroll into view, aligning it
 			//		either at the top or bottom of the pane.
 
+
+            //TODO restrict functionality for native scrolling , need to make sure we are reading the scroll position correctly for native
+
 			if(!this._v){ return; } // cannot scroll vertically
 
 			var c = this.containerNode,
@@ -830,6 +904,9 @@ define([
 		},
 
 		getSpeed: function(){
+
+            //TODO Make this work for native is possible
+
 			// summary:
 			//		Returns an object that indicates the scrolling speed.
 			// description:
@@ -867,62 +944,72 @@ define([
 			//		this.containerNode.
 
 			// scroll events
-			var scrollEvent, beforeTopHeight, afterBottomHeight;
-			var doScroll = true;
-			if(!this._aborted && this._conn){ // No scroll event if the call to scrollTo comes from abort or onTouchEnd
-				if(!this._dim){
-					this._dim = this.getDim();
-				}
-				beforeTopHeight = (to.y > 0)?to.y:0;
-				afterBottomHeight = (this._dim.o.h + to.y < 0)?-1 * (this._dim.o.h + to.y):0;
-				scrollEvent = {bubbles: false,
-						cancelable: false,
-						x: to.x,
-						y: to.y,
-						beforeTop: beforeTopHeight > 0,
-						beforeTopHeight: beforeTopHeight,
-						afterBottom: afterBottomHeight > 0,
-						afterBottomHeight: afterBottomHeight};
-				// before scroll event
-				doScroll = this.onBeforeScroll(scrollEvent);
-			}
-			
-			if(doScroll){
-				var s = (node || this.containerNode).style;
-				if(has("css3-animations")){
-					if(!this._useTopLeft){
-						if(this._useTransformTransition){
-							s[css3.name("transition")] = "";	
-						}
-						s[css3.name("transform")] = this.makeTranslateStr(to);
-					}else{
-						s[css3.name("transition")] = "";
-						if(this._v){
-							s.top = to.y + "px";
-						}
-						if(this._h || this._f){
-							s.left = to.x + "px";
-						}
-					}
-				}else{
-					if(this._v){
-						s.top = to.y + "px";
-					}
-					if(this._h || this._f){
-						s.left = to.x + "px";
-					}
-				}
-				if(has("ios")){
-					this._keepInputCaretInActiveElement();
-				}
-				if(!doNotMoveScrollBar){
-					this.scrollScrollBarTo(this.calcScrollBarPos(to));
-				}
-				if(scrollEvent){
-					// After scroll event
-					this.onAfterScroll(scrollEvent);
-				}
-			}
+
+            // Joe- MCLo make sure this is overridden for native scrolling. It should take care of itself, but make sure
+            //TODO check it works!
+            if(this.scrollType !==4){
+
+                var scrollEvent, beforeTopHeight, afterBottomHeight;
+                var doScroll = true;
+                if(!this._aborted && this._conn){ // No scroll event if the call to scrollTo comes from abort or onTouchEnd
+                    if(!this._dim){
+                        this._dim = this.getDim();
+                    }
+                    beforeTopHeight = (to.y > 0)?to.y:0;
+                    afterBottomHeight = (this._dim.o.h + to.y < 0)?-1 * (this._dim.o.h + to.y):0;
+                    scrollEvent = {bubbles: false,
+                        cancelable: false,
+                        x: to.x,
+                        y: to.y,
+                        beforeTop: beforeTopHeight > 0,
+                        beforeTopHeight: beforeTopHeight,
+                        afterBottom: afterBottomHeight > 0,
+                        afterBottomHeight: afterBottomHeight};
+                    // before scroll event
+                    doScroll = this.onBeforeScroll(scrollEvent);
+                }
+
+                if(doScroll){
+                    var s = (node || this.containerNode).style;
+                    if(has("css3-animations")){
+                        if(!this._useTopLeft){
+                            if(this._useTransformTransition){
+                                s[css3.name("transition")] = "";
+                            }
+                            s[css3.name("transform")] = this.makeTranslateStr(to);
+                        }else{
+                            s[css3.name("transition")] = "";
+                            if(this._v){
+                                s.top = to.y + "px";
+                            }
+                            if(this._h || this._f){
+                                s.left = to.x + "px";
+                            }
+                        }
+                    }else{
+                        if(this._v){
+                            s.top = to.y + "px";
+                        }
+                        if(this._h || this._f){
+                            s.left = to.x + "px";
+                        }
+                    }
+                    if(has("ios")){
+                        this._keepInputCaretInActiveElement();
+                    }
+                    if(!doNotMoveScrollBar){
+                        this.scrollScrollBarTo(this.calcScrollBarPos(to));
+                    }
+                    if(scrollEvent){
+                        // After scroll event
+                        this.onAfterScroll(scrollEvent);
+                    }
+                }
+
+            }
+
+
+
 		},
 
 		onBeforeScroll: function(/*Event*/e){
@@ -969,6 +1056,8 @@ define([
 			//		The name of easing effect which webkit supports.
 			//		"ease", "linear", "ease-in", "ease-out", etc.
 
+            //TODO investigate the possibility of a native slide.... unlikely to work smoothly.
+
 			this._runSlideAnimation(this.getPos(), to, duration, easing, this.containerNode, 2);
 			this.slideScrollBarTo(to, duration, easing);
 		},
@@ -988,6 +1077,9 @@ define([
 		},
 
 		getPos: function(){
+
+            //TODO update for native scrolling , read scrollTop and scrollLeft values.
+
 			// summary:
 			//		Gets the top position in the midst of animation.
 			if(has("css3-animations")){
@@ -1039,7 +1131,9 @@ define([
 			//		exist yet, and calls resetScrollBar() to reset its length and
 			//		position.
 
-			if(!this.scrollBar){ return; }
+            //JoeMclo - no scrollbar for native
+            //TODO check
+			if(!this.scrollBar || this.scrollType === 4){ return; }
 
 			var dim = this._dim;
 			if(this.scrollDir == "v" && dim.c.h <= dim.d.h){ return; }
@@ -1095,6 +1189,10 @@ define([
 			//		If the fadeScrollBar property is true, hides the scroll bar with
 			//		the fade animation.
 
+            //JoeMclo - no scrollbar for native
+            //TODO check
+            if(this.scrollType === 4){ return; }
+
 			if(this.fadeScrollBar && has("css3-animations")){
 				if(!dm._fadeRule){
 					var node = domConstruct.create("style", null, win.doc.getElementsByTagName("head")[0]);
@@ -1139,7 +1237,11 @@ define([
 			//		the left of the scroll bar(s). Returns an object with x and y.
 			// to:
 			//		The scroll destination position. An object with x and y.
-			//		ex. {x:0, y:-5}			
+			//		ex. {x:0, y:-5}
+
+            //JoeMclo - no scrollbar for native
+            //TODO check
+            if(this.scrollType === 4){ return; }
 
 			var pos = {};
 			var dim = this._dim;
@@ -1168,6 +1270,10 @@ define([
 			// to:
 			//		The destination position. An object with x and/or y.
 			//		ex. {x:2, y:5}, {y:20}, etc.
+
+            //JoeMclo - no scrollbar for native
+            //TODO check
+            if(this.scrollType === 4){ return; }
 
 			if(!this.scrollBar){ return; }
 			if(this._v && this._scrollBarV && typeof to.y == "number"){
@@ -1220,7 +1326,10 @@ define([
 			//		The name of easing effect which webkit supports.
 			//		"ease", "linear", "ease-in", "ease-out", etc.
 
-			if(!this.scrollBar){ return; }
+            //JoeMclo - no scrollbar for native
+            //TODO check
+			if(!this.scrollBar || this.scrollType === 4){ return; }
+
 			var fromPos = this.calcScrollBarPos(this.getPos());
 			var toPos = this.calcScrollBarPos(to);
 			if(this._v && this._scrollBarV){
@@ -1333,6 +1442,11 @@ define([
 		resetScrollBar: function(){
 			// summary:
 			//		Resets the scroll bar length, position, etc.
+
+            //JoeMclo - no scrollbar for native
+            //TODO check needed
+            if(this.scrollType === 4){ return; }
+
 			var f = function(wrapper, bar, d, c, hd, v){
 				if(!bar){ return; }
 				var props = {};
@@ -1377,6 +1491,11 @@ define([
 			//		This function shows the scroll bar, and then hides it 300ms
 			//		later. This is used to show the scroll bar to the user for a
 			//		short period of time when a hidden view is revealed.
+
+            //JoeMclo - no scrollbar for native
+            //TODO check needed
+            if(this.scrollType === 4){ return; }
+
 			if(this.disableFlashScrollBar || !this.domNode){ return; }
 			this._dim = this.getDim();
 			if(this._dim.d.h <= 0){ return; } // dom is not ready
