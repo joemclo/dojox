@@ -123,6 +123,7 @@ define([
 		//		- 1: use (-webkit-)transform:translate3d(x,y,z) style, use (-webkit-)animation for slide animation
 		//		- 2: use top/left style,
 		//		- 3: use (-webkit-)transform:translate3d(x,y,z) style, use (-webkit-)transition for slide animation
+        //      - 4: use overflow scroll for fast Native scrolling
 		//		- 0: use default value (3 for Android, iOS6+, and BlackBerry; otherwise 1)
 		scrollType: 0,
 		
