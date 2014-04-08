@@ -206,6 +206,29 @@ define([
                 // ie when touchEnd event fires and first subsequent on scroll event - CHECK THEY CONTINUE FIRING ON inertial scroll
 
 
+                //add in the actual support for native scrolling.
+                this.containerNode.style.webkitOverflowScrolling = "touch";
+                this.containerNode.style.height = window.innerHeight + 'px'; //this gets recalculated in resize taking into account everything.
+
+                if(this._v){
+                    this.containerNode.style.overflowY = "scroll"; // view bar is relative
+
+                }
+                else{
+                    this.containerNode.style.overflowY = "hidden";
+
+                }
+                if(this._h){
+                    this.containerNode.style.width = "";
+                    this.containerNode.style.overflowX = "scroll";
+                }
+                else{
+                    this.containerNode.style.width = "100%";
+                    this.containerNode.style.overflowX = "hidden";
+
+                }
+
+
             }
 
 			this._speed = {x:0, y:0};
