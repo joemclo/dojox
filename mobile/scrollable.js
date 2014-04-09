@@ -152,18 +152,30 @@ define([
 					}
 				}
 			}
-			// prevent browser scrolling on IE10 (evt.preventDefault() is not enough)
-			if(typeof this.domNode.style.msTouchAction != "undefined"){
-				this.domNode.style.msTouchAction = "none";
-			}
+
 			this.touchNode = this.touchNode || this.containerNode;
 			this._v = (this.scrollDir.indexOf("v") != -1); // vertical scrolling
 			this._h = (this.scrollDir.indexOf("h") != -1); // horizontal scrolling
 			this._f = (this.scrollDir == "f"); // flipping views
 
 			this._ch = []; // connect handlers
-			this._ch.push(connect.connect(this.touchNode, touch.press, this, "onTouchStart"));
-			if(has("css3-animations") && this.scrollType !== 4){
+
+            if(this.scrollType !== 4){
+
+                // prevent browser scrolling on IE10 (evt.preventDefault() is not enough)
+                if(typeof this.domNode.style.msTouchAction != "undefined"){
+                    this.domNode.style.msTouchAction = "none";
+                }
+            }
+
+            this._ch.push(connect.connect(this.touchNode, touch.press, this, "onTouchStart"));
+
+
+
+
+
+
+			if(has("css3-animations")){
 				// flag for whether to use -webkit-transform:translate3d(x,y,z) or top/left style.
 				// top/left style works fine as a workaround for input fields auto-scrolling issue,
 				// so use top/left in case of Android by default.
@@ -212,6 +224,7 @@ define([
 
                 if(this._v){
                     this.containerNode.style.overflowY = "scroll"; // view bar is relative
+                    this.containerNode.style.height = window.innerHeight + "px";
 
                 }
                 else{
@@ -227,6 +240,8 @@ define([
                     this.containerNode.style.overflowX = "hidden";
 
                 }
+
+
 
 
             }
@@ -548,12 +563,18 @@ define([
 			}
 
 			this._aborted = false;
-			if(domClass.contains(this.containerNode, "mblScrollableScrollTo2")){
-				this.abort();
-			}else{ // reset scrollbar class especially for reseting fade-out animation
-				if(this._scrollBarNodeV){ this._scrollBarNodeV.className = ""; }
-				if(this._scrollBarNodeH){ this._scrollBarNodeH.className = ""; }
-			}
+
+            if(this.scrollType !== 4){
+
+                if(domClass.contains(this.containerNode, "mblScrollableScrollTo2")){
+                    this.abort();
+                }else{ // reset scrollbar class especially for reseting fade-out animation
+                    if(this._scrollBarNodeV){ this._scrollBarNodeV.className = ""; }
+                    if(this._scrollBarNodeH){ this._scrollBarNodeH.className = ""; }
+                }
+            }
+
+
 			this.touchStartX = e.touches ? e.touches[0].pageX : e.clientX;
 			this.touchStartY = e.touches ? e.touches[0].pageY : e.clientY;
 			this.startTime = (new Date()).getTime();
@@ -566,11 +587,12 @@ define([
 			this._moved = false;
 
 			this._preventDefaultInNextTouchMove = true; // #17502
-			if(!this.isFormElement(e.target)){
+			if(!this.isFormElement(e.target) && this.scrollType !== 4){
 				// Call preventDefault to avoid browser scroll, except for form elements 
 				// for which doing it in touch.press would forbid the virtual keyboard 
 				// from showing up (for form elements which are text widgets, preventDefault
-				// is called in touch.move). 
+				// is called in touch.move).
+                // JOE MCLO - and in the case when we are doing a native scroll
 				this.propagatable ? e.preventDefault() : event.stop(e);
 				this._preventDefaultInNextTouchMove = false;
 			}
@@ -713,6 +735,19 @@ define([
             //TODO restrict functionality for native scrolling
 
 
+            if(this.scrollType !== 4){
+
+
+
+            }
+            else{
+
+
+
+
+            }
+
+
 			// summary:
 			//		User-defined function to handle touchEnd events.
 			if(this._locked){ return; }
@@ -760,7 +795,15 @@ define([
 			}
 
 			if(this.adjustDestination(to, pos, dim) === false){ return; }
-			if(this.constraint){
+            //Joe Mclo - with native scrolling no need to adjust destination
+            // for any different points so return
+
+            if(this.scrollType === 4){
+                return;
+            }
+
+
+			if(this.constraint ){
 				if(this.scrollDir == "v" && dim.c.h < dim.d.h){ // content is shorter than display
 					this.slideTo({y:0}, 0.3, "ease-out"); // go back to the top
 					return;
@@ -1131,18 +1174,52 @@ define([
 			// summary:
 			//		Returns various internal dimensional information needed for calculation.
 
+
+
+
+
 			var d = {};
-			// content width/height
-			d.c = {h:this.containerNode.offsetHeight, w:this.containerNode.offsetWidth};
 
-			// view width/height
-			d.v = {h:this.domNode.offsetHeight + this._appFooterHeight, w:this.domNode.offsetWidth};
+            //with native scrolling it is slightly different
+            if(this.scrollType === 4){
 
-			// display width/height
-			d.d = {h:d.v.h - this.fixedHeaderHeight - this.fixedFooterHeight - this._appFooterHeight, w:d.v.w};
+                var containerBounds = this.containerNode.getBoundingClientRect();
 
-			// overflowed width/height
-			d.o = {h:d.c.h - d.v.h + this.fixedHeaderHeight + this.fixedFooterHeight + this._appFooterHeight, w:d.c.w - d.v.w};
+
+
+                // content width/height
+                d.c = {h:this.containerNode.scrollHeight, w:this.containerNode.scrollWidth};
+
+                // view width/height
+                d.v = {h:this.domNode.offsetHeight + this._appFooterHeight, w:this.domNode.offsetWidth};
+
+                // display width/height
+                d.d = {h:d.v.h - this.fixedHeaderHeight - this.fixedFooterHeight - this._appFooterHeight, w:d.v.w};
+
+                // overflowed width/height
+                d.o = {h: d.c.h - containerBounds.height , w:d.c.w- containerBounds.width};
+
+
+            }
+            else{
+
+                // content width/height
+                d.c = {h:this.containerNode.offsetHeight, w:this.containerNode.offsetWidth};
+
+                // view width/height
+                d.v = {h:this.domNode.offsetHeight + this._appFooterHeight, w:this.domNode.offsetWidth};
+
+                // display width/height
+                d.d = {h:d.v.h - this.fixedHeaderHeight - this.fixedFooterHeight - this._appFooterHeight, w:d.v.w};
+
+                // overflowed width/height
+                d.o = {h:d.c.h - d.v.h + this.fixedHeaderHeight + this.fixedFooterHeight + this._appFooterHeight, w:d.c.w - d.v.w};
+
+
+            }
+
+
+
 			return d;
 		},
 
