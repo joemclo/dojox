@@ -1146,28 +1146,39 @@ define([
 
             //TODO update for native scrolling , read scrollTop and scrollLeft values.
 
-			// summary:
-			//		Gets the top position in the midst of animation.
-			if(has("css3-animations")){
-				var s = win.doc.defaultView.getComputedStyle(this.containerNode, '');
-				if(!this._useTopLeft){
-					var m = s[css3.name("transform")];
-					if(m && m.indexOf("matrix") === 0){
-						var arr = m.split(/[,\s\)]+/);
-						// IE10 returns a matrix3d
-						var i = m.indexOf("matrix3d") === 0 ? 12 : 4;
-						return {y:arr[i+1] - 0, x:arr[i] - 0};
-					}
-					return {x:0, y:0};
-				}else{
-					return {x:parseInt(s.left) || 0, y:parseInt(s.top) || 0};
-				}
-			}else{
-				// this.containerNode.offsetTop does not work here,
-				// because it adds the height of the top margin.
-				var y = parseInt(this.containerNode.style.top) || 0;
-				return {y:y, x:this.containerNode.offsetLeft};
-			}
+            if(this.scrollType === 4){
+
+                return{y:-this.containerNode.scrollTop,x: -this.containerNode.scrollLeft};
+
+            }else{
+
+                // summary:
+                //		Gets the top position in the midst of animation.
+                if(has("css3-animations")){
+                    var s = win.doc.defaultView.getComputedStyle(this.containerNode, '');
+                    if(!this._useTopLeft){
+                        var m = s[css3.name("transform")];
+                        if(m && m.indexOf("matrix") === 0){
+                            var arr = m.split(/[,\s\)]+/);
+                            // IE10 returns a matrix3d
+                            var i = m.indexOf("matrix3d") === 0 ? 12 : 4;
+                            return {y:arr[i+1] - 0, x:arr[i] - 0};
+                        }
+                        return {x:0, y:0};
+                    }else{
+                        return {x:parseInt(s.left) || 0, y:parseInt(s.top) || 0};
+                    }
+                }else{
+                    // this.containerNode.offsetTop does not work here,
+                    // because it adds the height of the top margin.
+                    var y = parseInt(this.containerNode.style.top) || 0;
+                    return {y:y, x:this.containerNode.offsetLeft};
+                }
+
+            }
+
+
+
 		},
 
 		getDim: function(){
